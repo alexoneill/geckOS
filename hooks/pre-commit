@@ -1,0 +1,113 @@
+# pre-commit
+# aoneill - 11/02/16
+
+ALL=0
+[[ "$1" == "--all" ]] && ALL=1 || exit 0
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FILES="$(readlink -f "$DIR/../")"
+
+STAGED="$(mktemp)"
+MODIFIED="$(mktemp)"
+
+function mod() {
+  title="$1"
+  pattern="$2"
+  file="$3"
+
+  sum="$(md5sum "$file")"
+  sed -i -e "$pattern" "$file"
+  if [[ "$(md5sum "$file")" != "$sum" ]]; then
+    echo "pre-commit: $title: $(echo "$file" | sed -e "s|^${FILES}/||")"
+    echo "$file" >> "$MODIFIED"
+  fi
+}
+
+function fix_header() {
+  file="$1"
+
+  sum="$(md5sum "$file")"
+
+  "$DIR/support/headers.sh" "$file" "$FILES"
+  if [[ "$(md5sum "$file")" != "$sum" ]]; then
+    echo "pre-commit: headers: $(echo "$file" | sed -e "s|^${FILES}/||")"
+    # echo "$file" >> "$MODIFIED"
+  fi
+}
+
+function fix_file() {
+  file="$1"
+  header="$(echo "$file" \
+              | sed -e "s|^${FILES}/||")"
+
+  sum="$(md5sum "$file")"
+  sed -i -e "s|^\(\s\+\*\s\+@file\s\+\).*|\1${header}|g" "$file"
+  if [[ "$(md5sum "$file")" != "$sum" ]]; then
+    echo "pre-commit: @file: $(echo "$file" | sed -e "s|^${FILES}/||")"
+    # echo "$file" >> "$MODIFIED"
+  fi
+}
+
+export DIR
+export FILES
+export STAGED
+export MODIFIED
+export -f mod
+export -f fix_header
+export -f fix_file
+
+# Setup
+function filter() {
+  cat - \
+    | grep -v "^${FILES}/410"
+}
+
+xargs_args="-P 0 -L 1 -I {}"
+(( !ALL )) && git diff --cached --name-only \
+  | sed -e "s|^|${FILES}/|" \
+  | filter \
+  | xargs ls -d 2>/dev/null > "$STAGED"
+(( ALL )) && find $FILES \
+    -name "*.h" -or -name "*.c" -or -name "*.S" \
+  | filter \
+  | xargs ls -d 2>/dev/null > "$STAGED"
+
+# 1) Blocks need space in front of opening paren '('
+pattern="s/\(if\|while\|for\)(/\1 (/g"
+cat "$STAGED" | grep "\.c$" \
+  | xargs $xargs_args bash -c 'mod "blocks" "'"$pattern"'" "$@"' _ {}
+
+# 2) Function definitions need star(s) after space
+pattern="s/^\(static \)\?\([a-zA-Z0-9_]\+\)\(\*\+\) /\1\2 \3/g"
+cat "$STAGED" | grep "\.[ch]$" \
+  | xargs $xargs_args bash -c 'mod "fn_stars" "'"$pattern"'" "$@"' _ {}
+
+# 3) Types with the wrong placement of stars
+pattern="s/\( \|(\)\([a-z0-9A-Z_ ]\+[a-z0-9A-Z_]\)\(\*\+\) \([a-zA-Z0-9_]\+\)"`
+  `"\( =\|[;,)]\)/\1\2 \3\4\5/g"
+cat "$STAGED" | grep "\.[ch]$" \
+  | xargs $xargs_args bash -c 'mod "fn_stars" "'"$pattern"'" "$@"' _ {}
+
+# 4) Extra spaces in parenthesis
+pattern="s/( \(.*\) )/(\1)/g"
+cat "$STAGED" | grep "\.[chS]$" \
+  | xargs $xargs_args bash -c 'mod "paren_spaces" "'"$pattern"'" "$@"' _ {}
+
+# 5) Extra spaces in dereference
+pattern="s/\s*->\s*/->/g"
+cat "$STAGED" | grep "\.[ch]$" \
+  | xargs $xargs_args bash -c 'mod "ref_spaces" "'"$pattern"'" "$@"' _ {}
+
+# 6) Fix Header file protectors
+cat "$STAGED" | grep "\.[ch]$" \
+  | xargs $xargs_args bash -c 'fix_header "$@"' _ {}
+
+# 7) Fix header comments with correct filename
+pattern="s/^\(\s\+\*\s\+@file\s\+\).*/g"
+cat "$STAGED" | grep "\.[chS]$" \
+  | xargs $xargs_args bash -c 'fix_file "$@"' _ {}
+
+[[ -s "$MODIFIED" ]] && \
+  cat "$MODIFIED" | sed -e "s|${FILES}/|:/|" | xargs git add
+
+rm -f "$STAGED" "$MODIFIED"
