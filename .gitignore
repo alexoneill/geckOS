@@ -1,0 +1,13 @@
+# .gitignore
+# aoneill - 05/02/17
+
+# Generated files
+*.o
+build/
+doc/
+
+# Other
+*.sw*
+*.ignore
+doxygen.warn
+log*
