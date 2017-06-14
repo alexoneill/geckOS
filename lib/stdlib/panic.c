@@ -37,6 +37,7 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof (buf), fmt, vl);
 	va_end(vl);
 	lprintf(buf);
+	lprintf("\n");
 
 	va_start(vl, fmt);
 	vprintf(fmt, vl);
