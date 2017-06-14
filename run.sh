@@ -16,13 +16,16 @@ function main() {
   [[ "$(pwd)" != "$DIR" ]] && tell cd "$DIR"
   tell make
 
+  [[ "$?" != "0" ]] && exit $?
+
   # Run QEMU
   qemu-system-i386 \
     -no-shutdown \
     -no-reboot \
     -serial file:log \
     $args -s -S  \
-    -fda "$IMG" &
+    -drive file=$IMG,index=0,if=floppy,format=raw \
+    2>/dev/null &
 
   pid=$!
 
@@ -36,12 +39,13 @@ target remote localhost:1234
 symbol-file $SYM
 
 break kernel_main
+break lbreak
 continue
 EOF
 
   # Run GDB
   echo "QEMU Running with pid=$pid"
-  gdb --command $GDB_SCRIPT
+  gdb -q --command $GDB_SCRIPT
 
   # Kill QEMU
   [[ -d /proc/$pid ]] && tell kill -9 $pid

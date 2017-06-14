@@ -18,5 +18,6 @@
 
 void qemu_init(void);
 int lprintf(const char *fmt, ...);
+void lbreak(void);
 
 #endif /* __LIB_QEMU_QEMU_H__ */

@@ -44,3 +44,5 @@ int lprintf(const char *fmt, ...) {
 
 	return 0;
 }
+
+void __attribute__((optimize("O0"))) lbreak(void) {}
