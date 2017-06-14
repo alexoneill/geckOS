@@ -65,7 +65,9 @@ void vm_init(pd_t *page_dir, pm_t *pm);
 void _vm_get_ent_ptrs(pd_t *page_dir, void *virt_addr, pd_ent_t *dir_ent, pt_ent_t *tbl_ent);
 int vm_get_flags(pd_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
 void vm_set_flags(pd_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
+int vm_map(pd_t *page_dir, void *virt_addr, void *phys_addr);
 int vm_alloc(pd_t *page_dir, pm_t *pm, void *virt_addr);
 void vm_free(pd_t *page_dir, pm_t *pm, void *virt_addr);
+void vm_print(pd_t *page_dir);
 
 #endif /* __VM_H__ */

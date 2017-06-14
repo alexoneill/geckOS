@@ -10,6 +10,7 @@
 #include "kernel.h"
 
 #include <mem/vm/vm.h>
+#include <proc/regs.h>
 
 // Temporary include to make ld happy...
 int putbyte(char c) {
@@ -37,18 +38,35 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp) {
   // lprintf("HI(10); 0x%x\n", BIT_SET_HI(10));
 
   pm_t pm;
-
   pd_t vm;
   vm_init(&vm, &pm);
 
-  pflags_t rw = PAGE_RW;
-  for(int i = 0; i < 10; i++) {
-    void *addr = (void *) (0x100 + i * PAGE_SIZE);
-    vm_alloc(&vm, &pm, addr);
-    vm_set_flags(&vm, addr, NULL, &rw);
+  pflags_t k_dir = PAGE_RW & PAGE_PRESENT;
+  pflags_t k_tbl = PAGE_GLOBAL & PAGE_RW & PAGE_PRESENT;
+  for(uint32_t i = 0; i < USER_MEM_START; i += PAGE_SIZE) {
+    vm_map(&vm, (void *) i, (void *) i);
+    vm_set_flags(&vm, (void *) i, &k_dir, &k_tbl);
 
-    lbreak();
+    // lprintf("Setup 0x%08x\n", i);
   }
+
+  lbreak();
+
+  vm_print(&vm);
+
+  lbreak();
+
+  uint32_t cr3 = get_cr3();
+  cr3 |= ((uint32_t) vm) & ~BIT_SET_LO(PAGE_FLAGS_BITS);
+  set_cr3(cr3);
+
+  uint32_t cr0 = get_cr0();
+  cr0 |= (1 << 31) | (1 << 0);
+  set_cr0(cr0);
+
+  uint32_t cr4 = get_cr4();
+  cr4 |= (1 << 7);
+  set_cr4(cr4);
 
   while (1);
 }
