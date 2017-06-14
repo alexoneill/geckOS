@@ -19,7 +19,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <mem/malloc.h>
+#include <mem/malloc/malloc.h>
 
 char *strdup(const char *src)
 {
