@@ -5,6 +5,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IMG="$DIR/build/bootfd.img"
 SYM="$DIR/build/kernel"
 
+LOG="$DIR/log_$(date +%s%3N)"
+
 function tell() { echo "$@"; $@; }
 
 function main() {
@@ -22,12 +24,18 @@ function main() {
   qemu-system-i386 \
     -no-shutdown \
     -no-reboot \
-    -serial file:log \
+    -serial file:"$LOG" \
     $args -s -S  \
     -drive file=$IMG,index=0,if=floppy,format=raw \
     2>/dev/null &
 
-  pid=$!
+  q_pid=$!
+
+  # Run the log listener
+  tell touch "$LOG"
+  termite --title="qemu-system-i386-log" --exec="tail -F $LOG" &
+
+  l_pid=$!
 
   # Wait a little
   sleep 0.5
@@ -44,12 +52,13 @@ continue
 EOF
 
   # Run GDB
-  echo "QEMU Running with pid=$pid"
+  echo "QEMU Running with pid=$q_pid"
   gdb -q --command $GDB_SCRIPT
-
-  # Kill QEMU
-  [[ -d /proc/$pid ]] && tell kill -9 $pid
   rm $GDB_SCRIPT
+
+  # Kill programs
+  [[ -d /proc/$l_pid ]] && tell kill -9 $l_pid
+  [[ -d /proc/$q_pid ]] && tell kill -9 $q_pid
 }
 
 main $@
