@@ -43,7 +43,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp) {
 
   pflags_t k_dir = PAGE_RW & PAGE_PRESENT;
   pflags_t k_tbl = PAGE_GLOBAL & PAGE_RW & PAGE_PRESENT;
-  for(uint32_t i = 0; i < USER_MEM_START; i += PAGE_SIZE) {
+  for(uint32_t i = 0; i < 1 * PAGE_SIZE; i += PAGE_SIZE) {
     vm_map(&vm, (void *) i, (void *) i);
     vm_set_flags(&vm, (void *) i, &k_dir, &k_tbl);
 

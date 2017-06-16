@@ -43,7 +43,7 @@ typedef void *pt_ent_t;
 typedef uint32_t pflags_t;
 
 #define PAGE_ENTRY(base, offset) \
-  ((base) + (offset))
+  (((uint32_t) (base)) + sizeof(uint32_t) * (offset))
 
 #define PAGE_FLAGS(ent) \
   ((*((pflags_t *) (ent))) & BIT_SET_LO(PAGE_FLAGS_BITS))
