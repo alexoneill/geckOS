@@ -21,8 +21,11 @@
 #define PAGE_TBL_BITS_OFFSET 12
 #define PAGE_FLAGS_BITS 12
 
-#define PAGE_DIR_ENTRIES (1 << (WORD_BITS - PAGE_DIR_BITS_OFFSET))
-#define PAGE_TBL_ENTRIES (1 << (PAGE_DIR_BITS_OFFSET - PAGE_TBL_BITS_OFFSET))
+#define PAGE_DIR_ENTRIES_BITS (WORD_BITS - PAGE_DIR_BITS_OFFSET)
+#define PAGE_TBL_ENTRIES_BITS (PAGE_DIR_BITS_OFFSET - PAGE_TBL_BITS_OFFSET)
+
+#define PAGE_DIR_ENTRIES (1 << PAGE_DIR_ENTRIES_BITS)
+#define PAGE_TBL_ENTRIES (1 << PAGE_TBL_ENTRIES_BITS)
 
 #define PAGE_PRESENT (1 << 0)
 #define PAGE_RW      (1 << 1)
@@ -48,10 +51,16 @@ typedef uint32_t pflags_t;
 #define PAGE_ENTRY(base, offset) \
   (((uint32_t) (base)) + sizeof(uint32_t) * (offset))
 
+// #define PAGE_DIR_BASE(ent)
+//   (pd_t) (((uint32_t) (ent)) & (~ BIT_SET_LO(PAGE_DIR_ENTRIES_BITS)))
+//
+// #define PAGE_TBL_BASE(ent)
+//   (pt_t) (((uint32_t) (ent)) & (~ BIT_SET_LO(PAGE_TBL_ENTRIES_BITS)))
+
 #define PAGE_FLAGS(ent) \
   ((*((pflags_t *) (ent))) & BIT_SET_LO(PAGE_FLAGS_BITS))
 
-#define PAGE_BASE(ent) \
+#define PAGE_NEXT(ent) \
     ((*((uint32_t *) (ent))) & (~(BIT_SET_LO(PAGE_FLAGS_BITS))))
 
 #define PAGE_SET_BASE(ent, base) \

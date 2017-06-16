@@ -14,7 +14,7 @@ uint32_t off = 0;
 
 void *pm_alloc(pm_t *pm) {
   void *out = (void *) (USER_MEM_START + (off++) * PAGE_SIZE);
-  //bzero(out, PAGE_SIZE - 1);
+  bzero(out, PAGE_SIZE);
 
   // lprintf("pm_alloc(...) => 0x%08x\n", pm, out);
   return out;
@@ -28,7 +28,7 @@ void vm_init(pd_t *page_dir, pm_t *pm) {
   assert(page_dir && pm);
 
   *page_dir = smemalign(PAGE_SIZE, PAGE_SIZE);
-  //bzero(*page_dir, PAGE_SIZE - 1);
+  bzero(*page_dir, PAGE_SIZE);
 }
 
 void _vm_get_ent_ptrs(pd_t *page_dir, void *virt_addr,
@@ -50,7 +50,7 @@ void _vm_get_ent_ptrs(pd_t *page_dir, void *virt_addr,
     uint32_t tbl_off = PAGE_TBL_OFFSET(virt_addr);
     // lprintf("_vm_get_ent_ptrs(...) => tbl_off = %d\n", tbl_off);
 
-    pt_t page_tbl = (pt_t) PAGE_BASE(*dir_ent);
+    pt_t page_tbl = (pt_t) PAGE_NEXT(*dir_ent);
     // lprintf("_vm_get_ent_ptrs(...) => page_tbl = %p\n", page_tbl);
 
     *tbl_ent = (pt_ent_t) PAGE_ENTRY(page_tbl, tbl_off);
@@ -109,7 +109,6 @@ void vm_set_flags(pd_t *page_dir, void *virt_addr,
 int vm_map(pd_t *page_dir, void *virt_addr, void *phys_addr) {
   assert(page_dir);
 
-  // lprintf("vm_alloc(..., %p, %p)\n", virt_addr, phys_addr);
 
   // Get entires
   pd_ent_t dir_ent = NULL;
@@ -118,8 +117,10 @@ int vm_map(pd_t *page_dir, void *virt_addr, void *phys_addr) {
 
   if(!tbl_ent) {
     void *page_tbl = smemalign(PAGE_SIZE, PAGE_SIZE);
-    //bzero(page_tbl, PAGE_SIZE - 1);
-    // lprintf("vm_alloc(...) => page_tbl = %p\n", page_tbl);
+    bzero(page_tbl, PAGE_SIZE);
+
+    lprintf("vm_map(..., %p, %p) (%p, ## %p ##)\n",  virt_addr, phys_addr, *page_dir, page_tbl);
+    lprintf("vm_map(...) => page_tbl = %p\n", page_tbl);
 
     PAGE_SET_BASE(dir_ent, page_tbl);
 
@@ -127,16 +128,17 @@ int vm_map(pd_t *page_dir, void *virt_addr, void *phys_addr) {
     *((pflags_t *) dir_ent) |= PAGE_PRESENT;
 
     uint32_t tbl_off = PAGE_TBL_OFFSET(virt_addr);
-    // lprintf("vm_alloc(...) => tbl_off = 0x%0x\n", tbl_off);
+    // lprintf("vm_map(...) => tbl_off = 0x%0x\n", tbl_off);
 
     tbl_ent = (pt_ent_t) PAGE_ENTRY(page_tbl, tbl_off);
-    // lprintf("vm_alloc(...) => tbl_ent = %p\n", tbl_ent);
+    lprintf("vm_map(...) => tbl_ent = %p\n", tbl_ent);
   }
+
 
   pflags_t tbl_flags = PAGE_FLAGS(tbl_ent);
   if(!(tbl_flags & PAGE_PRESENT)) {
     PAGE_SET_BASE(tbl_ent, phys_addr);
-    // lprintf("vm_alloc(...) => tbl_ent = %p\n", tbl_ent);
+    // lprintf("vm_map(...) => tbl_ent = %p\n", tbl_ent);
 
     // Mark as present
     *((pflags_t *) tbl_ent) |= PAGE_PRESENT;
@@ -160,7 +162,8 @@ void vm_free(pd_t *page_dir, pm_t *pm, void *virt_addr) {
   _vm_get_ent_ptrs(page_dir, virt_addr, NULL, &tbl_ent);
 
   // Free it
-  void *base = (void *) PAGE_BASE(tbl_ent);
+  // TODO
+  void *base = (void *) NULL; // PAGE_TBL_BASE(tbl_ent);
   pm_free(pm, base);
 
   // Mark as empty
@@ -176,7 +179,7 @@ void vm_print(pd_t *page_dir) {
     pflags_t d_flags = PAGE_FLAGS(d_ent);
 
     if(d_flags & PAGE_PRESENT) {
-      pt_t page_tbl = (pt_t) PAGE_BASE(d_ent);
+      pt_t page_tbl = (pt_t) PAGE_NEXT(d_ent);
       lprintf("  - tbl: %p (#%d, %p) ", page_tbl, dir_ent, d_ent);
       if(d_flags & PAGE_GLOBAL) lprintf("G");
       if(d_flags & PAGE_RW) lprintf("R");
@@ -187,7 +190,7 @@ void vm_print(pd_t *page_dir) {
         pflags_t t_flags = PAGE_FLAGS(t_ent);
 
         if(t_flags & PAGE_PRESENT) {
-          void* phys_addr = (void *) PAGE_BASE(t_ent);
+          void* phys_addr = (void *) PAGE_NEXT(t_ent);
           lprintf("    > phys: %p (#%d, %p) ", phys_addr, tbl_ent, t_ent);
           if(t_flags & PAGE_GLOBAL) lprintf("G");
           if(t_flags & PAGE_RW) lprintf("R");
