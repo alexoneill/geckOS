@@ -24,176 +24,172 @@ void pm_free(pm_t *pm, void *addr) {
   // lprintf("pm_free(...) => 0x%08x\n", addr);
 }
 
-void vm_init(pd_t *page_dir, pm_t *pm) {
-  assert(page_dir && pm);
+void vm_init(pt_t *page_tbl, pm_t *pm) {
+  assert(page_tbl && pm);
 
-  *page_dir = smemalign(PAGE_SIZE, PAGE_SIZE);
-  bzero(*page_dir, PAGE_SIZE);
+  *page_tbl = smemalign(PAGE_SIZE, PAGE_SIZE);
+  bzero(*page_tbl, PAGE_SIZE);
 }
 
-void _vm_get_ent_ptrs(pd_t *page_dir, void *virt_addr,
-    pd_ent_t *dir_ent, pt_ent_t *tbl_ent) {
-  assert(page_dir && dir_ent && tbl_ent);
+void _vm_get_loc_ptrs(pt_t *page_tbl, void *virt_addr,
+    pt_loc_t *utbl_loc, pt_loc_t *ltbl_loc) {
+  assert(page_tbl && utbl_loc && ltbl_loc);
 
-  // lprintf("_vm_get_ent_ptrs(%p, %p, ...)\n", *page_dir, virt_addr);
+  // lprintf("_vm_get_loc_ptrs(%p, %p, ...)\n", *page_tbl, virt_addr);
 
-  uint32_t dir_off = PAGE_DIR_OFFSET(virt_addr);
-  *dir_ent = (pd_ent_t) PAGE_ENTRY(*page_dir, dir_off);
+  uint32_t utbl_off = PAGE_DIR_OFFSET(virt_addr);
+  *utbl_loc = PAGE_LOC(*page_tbl, utbl_off);
 
-  // lprintf("_vm_get_ent_ptrs(...) => dir_off = %d\n", dir_off);
-  // lprintf("_vm_get_ent_ptrs(...) => dir_ent = %p\n", *dir_ent);
+  // lprintf("_vm_get_loc_ptrs(...) => utbl_off = %d\n", utbl_off);
+  // lprintf("_vm_get_loc_ptrs(...) => utbl_loc = %p\n", *utbl_loc);
 
-  pflags_t dir_flags = PAGE_FLAGS(*dir_ent);
-  // lprintf("_vm_get_ent_ptrs(...) => dir_flags = 0x%08x\n", dir_flags);
+  pflags_t utbl_flags = PAGE_ENTRY_FLAGS(*utbl_loc);
+  // lprintf("_vm_get_loc_ptrs(...) => utbl_flags = 0x%08x\n", utbl_flags);
 
-  if(dir_flags & PAGE_PRESENT) {
+  if(utbl_flags & PAGE_PRESENT) {
     uint32_t tbl_off = PAGE_TBL_OFFSET(virt_addr);
-    // lprintf("_vm_get_ent_ptrs(...) => tbl_off = %d\n", tbl_off);
+    // lprintf("_vm_get_loc_ptrs(...) => tbl_off = %d\n", tbl_off);
 
-    pt_t page_tbl = (pt_t) PAGE_NEXT(*dir_ent);
-    // lprintf("_vm_get_ent_ptrs(...) => page_tbl = %p\n", page_tbl);
+    pt_t lpage_tbl = PAGE_ENTRY_NEXT(*utbl_loc);
+    // lprintf("_vm_get_loc_ptrs(...) => lpage_tbl = %p\n", lpage_tbl);
 
-    *tbl_ent = (pt_ent_t) PAGE_ENTRY(page_tbl, tbl_off);
-    // lprintf("_vm_get_ent_ptrs(...) => tbl_ent = %p\n", *tbl_ent);
+    *ltbl_loc = PAGE_LOC(lpage_tbl, tbl_off);
+    // lprintf("_vm_get_loc_ptrs(...) => ltbl_loc = %p\n", *ltbl_loc);
   }
 }
 
-int vm_get_flags(pd_t *page_dir, void *virt_addr,
-    pflags_t *dir_flags, pflags_t *tbl_flags) {
-  assert(page_dir && dir_flags && tbl_flags);
+int vm_get_flags(pt_t *page_tbl, void *virt_addr,
+    pflags_t *utbl_flags, pflags_t *ltbl_flags) {
+  assert(page_tbl && utbl_flags && ltbl_flags);
 
   // lprintf("vm_get_flags(..., %p, ...)\n", virt_addr);
 
   // Get entires
-  pd_ent_t dir_ent = NULL;
-  pt_ent_t tbl_ent = NULL;
-  _vm_get_ent_ptrs(page_dir, virt_addr, &dir_ent, &tbl_ent);
+  pt_loc_t utbl_loc = NULL;
+  pt_loc_t ltbl_loc = NULL;
+  _vm_get_loc_ptrs(page_tbl, virt_addr, &utbl_loc, &ltbl_loc);
 
-  *dir_flags = PAGE_FLAGS(dir_ent);
-  // lprintf("vm_get_flags(...) => dir_flags = 0x%08x\n", *dir_flags);
-  if(tbl_ent) {
-    *tbl_flags = PAGE_FLAGS(tbl_ent);
-    // lprintf("vm_get_flags(...) => tbl_flags = 0x%08x\n", *tbl_flags);
+  *utbl_flags = PAGE_ENTRY_FLAGS(utbl_loc);
+  // lprintf("vm_get_flags(...) => utbl_flags = 0x%08x\n", *utbl_flags);
+  if(ltbl_loc) {
+    *ltbl_flags = PAGE_ENTRY_FLAGS(ltbl_loc);
+    // lprintf("vm_get_flags(...) => ltbl_flags = 0x%08x\n", *ltbl_flags);
     return 1;
   }
 
   return 0;
 }
 
-void vm_set_flags(pd_t *page_dir, void *virt_addr,
-    pflags_t *dir_flags, pflags_t *tbl_flags) {
-  assert(page_dir);
+void vm_set_flags(pt_t *page_tbl, void *virt_addr,
+    pflags_t *utbl_flags, pflags_t *ltbl_flags) {
+  assert(page_tbl);
 
-  // lprintf("vm_set_flags(..., %p, %p, %p)\n", virt_addr, dir_flags, tbl_flags);
-  // if(dir_flags)
-  //   lprintf("vm_set_flags(...) => dir_flags = 0x%08x\n", *dir_flags);
-  // if(tbl_flags)
-  //   lprintf("vm_set_flags(...) => tbl_flags = 0x%08x\n", *tbl_flags);
+  // lprintf("vm_set_flags(..., %p, %p, %p)\n", virt_addr, utbl_flags, ltbl_flags);
+  // if(utbl_flags)
+  //   lprintf("vm_set_flags(...) => utbl_flags = 0x%08x\n", *utbl_flags);
+  // if(ltbl_flags)
+  //   lprintf("vm_set_flags(...) => ltbl_flags = 0x%08x\n", *ltbl_flags);
 
   // Get entires
-  pd_ent_t dir_ent = NULL;
-  pt_ent_t tbl_ent = NULL;
-  _vm_get_ent_ptrs(page_dir, virt_addr, &dir_ent, &tbl_ent);
+  pt_loc_t utbl_loc = NULL;
+  pt_loc_t ltbl_loc = NULL;
+  _vm_get_loc_ptrs(page_tbl, virt_addr, &utbl_loc, &ltbl_loc);
 
-  if(dir_ent && dir_flags) {
-    *((pflags_t *) dir_ent) |= *dir_flags;
-    // lprintf("vm_set_flags(...) => dir_flags = 0x%08x\n", *dir_flags);
+  if(utbl_loc && utbl_flags) {
+    PAGE_SET_FLAGS(utbl_loc, *utbl_flags);
+
+    // lprintf("vm_set_flags(...) => utbl_flags = 0x%08x\n", *utbl_flags);
   }
 
-  if(tbl_ent && tbl_flags) {
-    *((pflags_t *) tbl_ent) |= *tbl_flags;
-    // lprintf("vm_set_flags(...) => tbl_flags = 0x%08x\n", *tbl_flags);
+  if(ltbl_loc && ltbl_flags) {
+    PAGE_SET_FLAGS(ltbl_loc, *ltbl_flags);
+
+    // lprintf("vm_set_flags(...) => ltbl_flags = 0x%08x\n", *ltbl_flags);
   }
 }
 
-int vm_map(pd_t *page_dir, void *virt_addr, void *phys_addr) {
-  assert(page_dir);
-
+int vm_map(pt_t *page_tbl, void *virt_addr, void *phys_addr) {
+  assert(page_tbl);
 
   // Get entires
-  pd_ent_t dir_ent = NULL;
-  pt_ent_t tbl_ent = NULL;
-  _vm_get_ent_ptrs(page_dir, virt_addr, &dir_ent, &tbl_ent);
+  pt_loc_t utbl_loc = NULL;
+  pt_loc_t ltbl_loc = NULL;
+  _vm_get_loc_ptrs(page_tbl, virt_addr, &utbl_loc, &ltbl_loc);
 
-  if(!tbl_ent) {
-    void *page_tbl = smemalign(PAGE_SIZE, PAGE_SIZE);
-    bzero(page_tbl, PAGE_SIZE);
+  if(!ltbl_loc) {
+    void *lpage_tbl = smemalign(PAGE_SIZE, PAGE_SIZE);
+    bzero(lpage_tbl, PAGE_SIZE);
 
-    lprintf("vm_map(..., %p, %p) (%p, ## %p ##)\n",  virt_addr, phys_addr, *page_dir, page_tbl);
-    lprintf("vm_map(...) => page_tbl = %p\n", page_tbl);
+    lprintf("vm_map(..., %p, %p) (%p, ## %p ##)\n",  virt_addr, phys_addr, *page_tbl, lpage_tbl);
+    lprintf("vm_map(...) => lpage_tbl = %p\n", lpage_tbl);
 
-    PAGE_SET_BASE(dir_ent, page_tbl);
-
-    // Mark as present
-    *((pflags_t *) dir_ent) |= PAGE_PRESENT;
+    // Populate and mark as present
+    PAGE_SET_ENTRY(utbl_loc, PAGE_ENTRY(lpage_tbl, PAGE_PRESENT));
 
     uint32_t tbl_off = PAGE_TBL_OFFSET(virt_addr);
     // lprintf("vm_map(...) => tbl_off = 0x%0x\n", tbl_off);
 
-    tbl_ent = (pt_ent_t) PAGE_ENTRY(page_tbl, tbl_off);
-    lprintf("vm_map(...) => tbl_ent = %p\n", tbl_ent);
+    ltbl_loc = PAGE_LOC(lpage_tbl, tbl_off);
+    lprintf("vm_map(...) => ltbl_loc = %p\n", ltbl_loc);
   }
 
+  pflags_t ltbl_flags = PAGE_ENTRY_FLAGS(ltbl_loc);
+  if(!(ltbl_flags & PAGE_PRESENT)) {
+    // Populate and mark as present
+    PAGE_SET_ENTRY(ltbl_loc, PAGE_ENTRY(phys_addr, PAGE_PRESENT));
 
-  pflags_t tbl_flags = PAGE_FLAGS(tbl_ent);
-  if(!(tbl_flags & PAGE_PRESENT)) {
-    PAGE_SET_BASE(tbl_ent, phys_addr);
-    // lprintf("vm_map(...) => tbl_ent = %p\n", tbl_ent);
-
-    // Mark as present
-    *((pflags_t *) tbl_ent) |= PAGE_PRESENT;
+    // lprintf("vm_map(...) => ltbl_loc = %p\n", ltbl_loc);
   }
 
   return 1;
 }
 
-int vm_alloc(pd_t *page_dir, pm_t *pm, void *virt_addr) {
-  assert(page_dir && pm);
+int vm_alloc(pt_t *page_tbl, pm_t *pm, void *virt_addr) {
+  assert(page_tbl && pm);
 
   // lprintf("vm_alloc(..., %p)\n", virt_addr);
-  return vm_map(page_dir, virt_addr, pm_alloc(pm));
+  return vm_map(page_tbl, virt_addr, pm_alloc(pm));
 }
 
-void vm_free(pd_t *page_dir, pm_t *pm, void *virt_addr) {
-  assert(page_dir && pm);
+void vm_free(pt_t *page_tbl, pm_t *pm, void *virt_addr) {
+  assert(page_tbl && pm);
 
   // Get entires
-  pt_ent_t tbl_ent = NULL;
-  _vm_get_ent_ptrs(page_dir, virt_addr, NULL, &tbl_ent);
+  pt_loc_t ltbl_loc = NULL;
+  _vm_get_loc_ptrs(page_tbl, virt_addr, NULL, &ltbl_loc);
 
   // Free it
-  // TODO
-  void *base = (void *) NULL; // PAGE_TBL_BASE(tbl_ent);
+  void *base = (void *) PAGE_ENTRY_NEXT(ltbl_loc);
   pm_free(pm, base);
 
   // Mark as empty
-  *((pflags_t *) tbl_ent) &= ~PAGE_PRESENT;
+  PAGE_SET_ENTRY(ltbl_loc, 0);
 }
 
-void vm_print(pd_t *page_dir) {
-  assert(page_dir);
-  lprintf("vm :: dir: %p\n", *page_dir);
+void vm_print(pt_t *page_tbl) {
+  assert(page_tbl);
+  lprintf("vm :: dir: %p\n", *page_tbl);
 
-  for(int dir_ent = 0; dir_ent < PAGE_DIR_ENTRIES; dir_ent++) {
-    pd_ent_t d_ent = (pd_ent_t) PAGE_ENTRY(*page_dir, dir_ent);
-    pflags_t d_flags = PAGE_FLAGS(d_ent);
+  for(int utbl_index = 0; utbl_index < PAGE_DIR_ENTRIES; utbl_index++) {
+    pt_loc_t utbl_loc = (pt_loc_t) PAGE_LOC(*page_tbl, utbl_index);
+    pflags_t utbl_flags = PAGE_ENTRY_FLAGS(utbl_loc);
 
-    if(d_flags & PAGE_PRESENT) {
-      pt_t page_tbl = (pt_t) PAGE_NEXT(d_ent);
-      lprintf("  - tbl: %p (#%d, %p) ", page_tbl, dir_ent, d_ent);
-      if(d_flags & PAGE_GLOBAL) lprintf("G");
-      if(d_flags & PAGE_RW) lprintf("R");
+    if(utbl_flags & PAGE_PRESENT) {
+      pt_t lpage_tbl = PAGE_ENTRY_NEXT(utbl_loc);
+      lprintf("  - tbl: %p (#%d, %p) ", lpage_tbl, utbl_index, utbl_loc);
+      if(utbl_flags & PAGE_GLOBAL) lprintf("G");
+      if(utbl_flags & PAGE_RW) lprintf("R");
       lprintf("P\n");
 
-      for(int tbl_ent = 0; tbl_ent < PAGE_TBL_ENTRIES; tbl_ent++) {
-        pt_ent_t t_ent = (pt_ent_t) PAGE_ENTRY(page_tbl, tbl_ent);
-        pflags_t t_flags = PAGE_FLAGS(t_ent);
+      for(int ltbl_index = 0; ltbl_index < PAGE_TBL_ENTRIES; ltbl_index++) {
+        pt_loc_t ltbl_loc = (pt_loc_t) PAGE_LOC(lpage_tbl, ltbl_index);
+        pflags_t ltbl_flags = PAGE_ENTRY_FLAGS(ltbl_loc);
 
-        if(t_flags & PAGE_PRESENT) {
-          void* phys_addr = (void *) PAGE_NEXT(t_ent);
-          lprintf("    > phys: %p (#%d, %p) ", phys_addr, tbl_ent, t_ent);
-          if(t_flags & PAGE_GLOBAL) lprintf("G");
-          if(t_flags & PAGE_RW) lprintf("R");
+        if(ltbl_flags & PAGE_PRESENT) {
+          void* phys_addr = (void *) PAGE_ENTRY_NEXT(ltbl_loc);
+          lprintf("    > phys: %p (#%d, %p) ", phys_addr, ltbl_index, ltbl_loc);
+          if(ltbl_flags & PAGE_GLOBAL) lprintf("G");
+          if(ltbl_flags & PAGE_RW) lprintf("R");
           lprintf("P\n");
         }
       }
