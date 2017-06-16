@@ -1,14 +1,12 @@
 /**
  * @file pt.c
- * @brief
+ * @brief Implementation of a multi-layered page table
  *
  * @author Alex O'Neill <me@aoneill.me>
  * @bugs No known bugs.
  */
 
 #include "pt.h"
-
-#include <qemu/qemu.h>
 
 // TODO: Actual physical memory allocator
 uint32_t off = 0;
@@ -217,7 +215,7 @@ void pt_free(pt_t *page_tbl, pm_t *pm, void *virt_addr) {
  */
 void pt_print(pt_t *page_tbl) {
   assert(page_tbl);
-  lprintf("vm :: dir: %p\n", *page_tbl);
+  lprintf("page_table :: upper: %p\n", *page_tbl);
 
   // Go through upper level entries
   for(int utbl_index = 0; utbl_index < PAGE_DIR_ENTRIES; utbl_index++) {
@@ -227,7 +225,7 @@ void pt_print(pt_t *page_tbl) {
     // If the next level is present display it
     if(utbl_flags & PAGE_PRESENT) {
       pt_t lpage_tbl = PAGE_ENTRY_NEXT(utbl_loc);
-      lprintf("  - tbl: %p (#%d, %p) ", lpage_tbl, utbl_index, utbl_loc);
+      lprintf("  - lower: %p (#%d, %p) ", lpage_tbl, utbl_index, utbl_loc);
       if(utbl_flags & PAGE_GLOBAL) lprintf("G");
       if(utbl_flags & PAGE_RW) lprintf("R");
       lprintf("P\n");
@@ -240,7 +238,7 @@ void pt_print(pt_t *page_tbl) {
         // If the mapping is present, display it
         if(ltbl_flags & PAGE_PRESENT) {
           void* phys_addr = (void *) PAGE_ENTRY_NEXT(ltbl_loc);
-          lprintf("    > phys: %p (#%d, %p) ", phys_addr, ltbl_index, ltbl_loc);
+          lprintf("    > map: %p (#%d, %p) ", phys_addr, ltbl_index, ltbl_loc);
           if(ltbl_flags & PAGE_GLOBAL) lprintf("G");
           if(ltbl_flags & PAGE_RW) lprintf("R");
           lprintf("P\n");

@@ -1,6 +1,10 @@
 /**
  * @file pm.h
- * @brief
+ * @brief Definitions and constants for multi-layered page tables
+ *
+ * This provides the interface for an arbitrarily nested page table
+ * implementation. Below is a two layered implementation, with a upper
+ * and lower table, encoding 4KB pages
  *
  * @author Alex O'Neill <me@aoneill.me>
  */
@@ -9,13 +13,14 @@
 #define __PM_H__
 
 #include <assert.h>
-#include <string/string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <x86/page.h>
-#include <util.h>
 #include <kern.h>
 #include <mem/malloc/malloc.h>
+#include <qemu/qemu.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string/string.h>
+#include <util.h>
+#include <x86/page.h>
 
 /** @brief The offset into the memory address for the upper table */
 #define PAGE_UTBL_BITS_OFFSET 22
