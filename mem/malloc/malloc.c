@@ -10,8 +10,9 @@
 #include <qemu/qemu.h>
 
 void *malloc(size_t size) {
+  lprintf("malloc(0x%x) => ", size);
   void *out = _malloc(size);
-  lprintf("malloc(0x%x) => %p\n", size, out);
+  lprintf("%p\n", out);
   return out;
 }
 
@@ -28,7 +29,8 @@ void *malloc(size_t size) {
 // void _sfree(void *buf, size_t size);
 
 void *smemalign(size_t alignment, size_t size) {
+  lprintf("smemalign(0x%x, 0x%x) => ", alignment, size);
   void *out = _smemalign(alignment, size);
-  lprintf("smemalign(0x%x, 0x%x) => %p\n", alignment, size, out);
+  lprintf("%p\n", out);
   return out;
 }

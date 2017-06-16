@@ -1,8 +1,9 @@
 # Makefile
 # aoneill - 02/27/17
 
-all: bcopy.o \
-	   memcmp.o     \
+all: bcopy.o      \
+     bzero.o      \
+     memcmp.o     \
      memset.o     \
      rindex.o     \
      strcat.o     \

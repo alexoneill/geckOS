@@ -48,6 +48,7 @@ symbol-file $SYM
 
 break kernel_main
 break lbreak
+break panic
 continue
 EOF
 
