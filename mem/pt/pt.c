@@ -27,7 +27,7 @@ void pm_free(pm_t *pm, void *addr) {}
  * @param page_tbl A pointer to the page table object to initialize
  */
 void pt_init(pt_t *page_tbl) {
-  assert(page_tbl && pm);
+  assert(page_tbl);
 
   // Get a chunk of memory
   *page_tbl = smemalign(PAGE_SIZE, PAGE_SIZE);
@@ -184,8 +184,8 @@ void pt_map(pt_t *page_tbl, void *virt_addr, void *phys_addr) {
  *
  * @return
  */
-int pt_alloc(pt_t *page_tbl, pm_t *pm, void *virt_addr) {
-  return pt_map(page_tbl, virt_addr, pm_alloc(pm));
+void pt_alloc(pt_t *page_tbl, pm_t *pm, void *virt_addr) {
+  pt_map(page_tbl, virt_addr, pm_alloc(pm));
 }
 
 /**
