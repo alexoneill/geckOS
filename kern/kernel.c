@@ -9,7 +9,7 @@
 
 #include "kernel.h"
 
-#include <mem/vm/vm.h>
+#include <mem/pt/pt.h>
 #include <proc/regs.h>
 
 // Temporary include to make ld happy...
@@ -38,19 +38,19 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp) {
   // lprintf("HI(10); 0x%x\n", BIT_SET_HI(10));
 
   pm_t pm;
-  pd_t vm;
-  vm_init(&vm, &pm);
+  pt_t vm;
+  pt_init(&vm, &pm);
 
   pflags_t k_dir = PAGE_RW | PAGE_PRESENT;
   pflags_t k_tbl = PAGE_GLOBAL | PAGE_RW | PAGE_PRESENT;
   for(uint32_t i = 0; i < USER_MEM_START; i += PAGE_SIZE) {
-    vm_map(&vm, (void *) i, (void *) i);
-    vm_set_flags(&vm, (void *) i, &k_dir, &k_tbl);
+    pt_map(&vm, (void *) i, (void *) i);
+    pt_set_flags(&vm, (void *) i, &k_dir, &k_tbl);
   }
 
   lbreak();
 
-  vm_print(&vm);
+  pt_print(&vm);
 
   lbreak();
 

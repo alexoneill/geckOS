@@ -1,12 +1,12 @@
 /**
- * @file vm.h
+ * @file pm.h
  * @brief
  *
  * @author Alex O'Neill <me@aoneill.me>
  */
 
-#ifndef __VM_H__
-#define __VM_H__
+#ifndef __PM_H__
+#define __PM_H__
 
 #include <assert.h>
 #include <string/string.h>
@@ -65,13 +65,13 @@ typedef void *pm_t;
 void *pm_alloc(pm_t *pm);
 void pm_free(pm_t *pm, void *addr);
 
-void vm_init(pt_t *page_dir, pm_t *pm);
-void _vm_get_loc_ptrs(pt_t *page_dir, void *virt_addr, pt_loc_t *dir_loc, pt_loc_t *tbl_loc);
-int vm_get_flags(pt_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
-void vm_set_flags(pt_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
-int vm_map(pt_t *page_dir, void *virt_addr, void *phys_addr);
-int vm_alloc(pt_t *page_dir, pm_t *pm, void *virt_addr);
-void vm_free(pt_t *page_dir, pm_t *pm, void *virt_addr);
-void vm_print(pt_t *page_dir);
+void pt_init(pt_t *page_dir, pm_t *pm);
+void _pt_get_loc_ptrs(pt_t *page_dir, void *virt_addr, pt_loc_t *dir_loc, pt_loc_t *tbl_loc);
+int pt_get_flags(pt_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
+void pt_set_flags(pt_t *page_dir, void *virt_addr, pflags_t *dir_flags, pflags_t *tbl_flags);
+int pt_map(pt_t *page_dir, void *virt_addr, void *phys_addr);
+int pt_alloc(pt_t *page_dir, pm_t *pm, void *virt_addr);
+void pt_free(pt_t *page_dir, pm_t *pm, void *virt_addr);
+void pt_print(pt_t *page_dir);
 
-#endif /* __VM_H__ */
+#endif /* __PM_H__ */
