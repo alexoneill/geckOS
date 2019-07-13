@@ -40,19 +40,19 @@ static void pic_init(unsigned char master_base, unsigned char slave_base) {
   outb(MASTER_OCW, PICM_ICW4);
 
   // Bring the slave IDT up
-  outb( SLAVE_ICW, PICS_ICW1);
-  outb( SLAVE_OCW, slave_base);
-  outb( SLAVE_OCW, PICS_ICW3);
-  outb( SLAVE_OCW, PICS_ICW4);
+  outb(SLAVE_ICW, PICS_ICW1);
+  outb(SLAVE_OCW, slave_base);
+  outb(SLAVE_OCW, PICS_ICW3);
+  outb(SLAVE_OCW, PICS_ICW4);
 
   // Tell the master and slave that any IRQs they had outstanding
   //   have been acknowledged.
   outb(MASTER_ICW, NON_SPEC_EOI);
-  outb( SLAVE_ICW, NON_SPEC_EOI);
+  outb(SLAVE_ICW, NON_SPEC_EOI);
 
   // Enable all IRQs on master and slave
-  outb ( SLAVE_OCW, 0);
-  outb (MASTER_OCW, 0);
+  outb(SLAVE_OCW, 0);
+  outb(MASTER_OCW, 0);
 }
 
 /**
